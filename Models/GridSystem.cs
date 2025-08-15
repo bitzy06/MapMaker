@@ -12,9 +12,9 @@ namespace MapMaker.Models
     public class GridSystem
     {
         /// <summary>
-        /// Base grid cell size in world units (10 meters)
+        /// Base grid cell size in world units (2 meters)
         /// </summary>
-        public const double BASE_GRID_SIZE = 10.0;
+        public const double BASE_GRID_SIZE = 2.0;
 
         /// <summary>
         /// Origin point of the grid system
@@ -39,40 +39,56 @@ namespace MapMaker.Models
         {
             // Calculate adaptive grid size based on zoom level
             // Higher zoom = finer grid, lower zoom = coarser grid
-            if (zoomLevel >= 4.0)
+            // Zoom ranges from 0.1 to 10.0
+            if (zoomLevel >= 8.0)
             {
-                // Very high zoom: 1m grid cells
+                // Very high zoom: 0.25m grid cells for maximum precision
+                EffectiveGridSize = 0.25;
+            }
+            else if (zoomLevel >= 6.0)
+            {
+                // Very high zoom: 0.5m grid cells
+                EffectiveGridSize = 0.5;
+            }
+            else if (zoomLevel >= 4.0)
+            {
+                // High zoom: 1m grid cells
                 EffectiveGridSize = 1.0;
             }
-            else if (zoomLevel >= 2.0)
+            else if (zoomLevel >= 2.5)
             {
-                // High zoom: 2m grid cells
-                EffectiveGridSize = 2.0;
+                // High-medium zoom: base 2m grid cells
+                EffectiveGridSize = BASE_GRID_SIZE;
+            }
+            else if (zoomLevel >= 1.5)
+            {
+                // Medium zoom: 3m grid cells
+                EffectiveGridSize = 3.0;
             }
             else if (zoomLevel >= 1.0)
             {
                 // Normal zoom: 5m grid cells
                 EffectiveGridSize = 5.0;
             }
-            else if (zoomLevel >= 0.5)
+            else if (zoomLevel >= 0.6)
             {
-                // Medium zoom: base 10m grid cells
-                EffectiveGridSize = BASE_GRID_SIZE;
+                // Lower zoom: 8m grid cells
+                EffectiveGridSize = 8.0;
             }
-            else if (zoomLevel >= 0.25)
+            else if (zoomLevel >= 0.3)
             {
-                // Low zoom: 20m grid cells
-                EffectiveGridSize = 20.0;
+                // Low zoom: 15m grid cells
+                EffectiveGridSize = 15.0;
             }
-            else if (zoomLevel >= 0.1)
+            else if (zoomLevel >= 0.2)
             {
-                // Very low zoom: 50m grid cells
-                EffectiveGridSize = 50.0;
+                // Very low zoom: 25m grid cells
+                EffectiveGridSize = 25.0;
             }
             else
             {
-                // Extremely low zoom: 100m grid cells
-                EffectiveGridSize = 100.0;
+                // Extremely low zoom: 50m grid cells for overview
+                EffectiveGridSize = 50.0;
             }
         }
 
