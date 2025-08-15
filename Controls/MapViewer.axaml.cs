@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Reflection;
+using System.Linq;
 using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Input;
@@ -9,6 +10,8 @@ using Avalonia.Media;
 using NetTopologySuite.Geometries;
 using NetTopologySuite.IO;
 using MapMaker.Tools;
+using MapMaker.Models;
+using MapMaker.Services;
 using AvaloniaPoint = Avalonia.Point;
 using FilePath = System.IO.Path;
 using NTSGeometry = NetTopologySuite.Geometries.Geometry;
@@ -36,10 +39,19 @@ namespace MapMaker.Controls
         // Tool system integration
         private MainWindow? _toolManager;
 
+        // Grid system integration
+        private GridSystem? _gridSystem;
+        private List<GridLayer> _gridLayers = new List<GridLayer>();
+        private IGeometryToGridConverter? _gridConverter;
+        private IGridRenderer? _gridRenderer;
+        private CoordinateTransform? _coordinateTransform;
+        private bool _useGridRendering = true; // Toggle between grid and vector rendering
+
         public MapViewer()
         {
             InitializeComponent();
             SetupEventHandlers();
+            InitializeGridSystem();
 
             // Create a dedicated canvas for shapes
             _shapeCanvas = new Canvas();
@@ -52,6 +64,14 @@ namespace MapMaker.Controls
                 RedrawShapes();
                 UpdateTransform();
             };
+        }
+
+        private void InitializeGridSystem()
+        {
+            // Initialize grid system with origin at (0, 0)
+            _gridSystem = new GridSystem(new NetTopologySuite.Geometries.Point(0, 0));
+            _gridConverter = new GeometryToGridConverter();
+            _gridRenderer = new GridRenderer();
         }
 
         public void SetToolManager(MainWindow toolManager)
@@ -182,6 +202,7 @@ namespace MapMaker.Controls
             Console.WriteLine($"LoadMap called with mapType: {mapType}");
             _currentMapType = mapType;
             _currentShapes.Clear();
+            _gridLayers.Clear(); // Clear grid layers
             _dataEnvelope = null;
             _fitScale = 1.0;
             _fitOffset = new AvaloniaPoint(0, 0);
@@ -308,6 +329,7 @@ namespace MapMaker.Controls
 
                 // Prepare transforms and draw
                 RecomputeFitTransform();
+                ConvertToGridFormat(); // Convert loaded shapes to grid format
                 RedrawShapes();
                 UpdateTransform();
                 
@@ -398,6 +420,49 @@ namespace MapMaker.Controls
             _fitOffset = new AvaloniaPoint(dx, dy);
         }
 
+        /// <summary>
+        /// Convert loaded shapes to grid format
+        /// </summary>
+        private void ConvertToGridFormat()
+        {
+            if (_currentShapes.Count == 0 || _gridSystem == null || _gridConverter == null)
+                return;
+
+            Console.WriteLine($"Converting {_currentShapes.Count} shapes to grid format...");
+
+            // Create features from NTS geometries
+            var features = new List<Feature>();
+            for (int i = 0; i < _currentShapes.Count; i++)
+            {
+                var feature = new Feature($"feature_{i}", _currentShapes[i]);
+                // Add some sample attributes for strategy game
+                feature.Attributes["owner"] = "neutral";
+                feature.Attributes["terrain"] = "land";
+                feature.Attributes["province_id"] = i;
+                features.Add(feature);
+            }
+
+            // Convert to grid format with appropriate options
+            var options = new GridConversionOptions
+            {
+                MinCoverage = 0.1, // 10% minimum coverage
+                CalculateExactCoverage = false, // Use faster approximate coverage for now
+                PreserveAttributes = true
+            };
+
+            var gridLayer = _gridConverter.ConvertFeaturesToGridLayer(
+                features, 
+                $"{_currentMapType}_grid", 
+                _gridSystem, 
+                options);
+
+            _gridLayers.Clear();
+            _gridLayers.Add(gridLayer);
+
+            var stats = gridLayer.GetStats();
+            Console.WriteLine($"Grid conversion complete: {stats}");
+        }
+
         private AvaloniaPoint WorldToScreen(Coordinate c)
         {
             // Map world (lon/lat or projected) to screen coordinates that fit MapCanvas
@@ -416,9 +481,52 @@ namespace MapMaker.Controls
                 return;
 
             _shapeCanvas.Children.Clear();
-            if (_currentShapes.Count == 0 || _dataEnvelope == null)
+
+            if (_useGridRendering && _gridLayers.Count > 0)
+            {
+                RenderFromGrid();
+            }
+            else if (_currentShapes.Count > 0 && _dataEnvelope != null)
+            {
+                RenderFromVector();
+            }
+        }
+
+        /// <summary>
+        /// Render from grid data format
+        /// </summary>
+        private void RenderFromGrid()
+        {
+            if (_gridRenderer == null || _dataEnvelope == null || !_gridLayers.Any())
                 return;
 
+            // Update coordinate transform for grid renderer
+            UpdateCoordinateTransform();
+
+            foreach (var gridLayer in _gridLayers)
+            {
+                var options = new GridRenderOptions
+                {
+                    Fill = new SolidColorBrush(Colors.Green, 0.6),
+                    Stroke = new SolidColorBrush(Colors.DarkGreen),
+                    StrokeThickness = 0.5,
+                    ShowCellBorders = _zoomFactor > 0.5, // Only show borders when zoomed in
+                    ShowOnlyOccupied = true,
+                    MinZoomForCells = 0.1,
+                    UseCoverageAlpha = true
+                };
+
+                _gridRenderer.RenderGridLayer(gridLayer, _shapeCanvas, options);
+            }
+
+            Console.WriteLine($"Rendered grid with {_gridLayers.Sum(l => l.GetOccupiedCells().Count())} occupied cells");
+        }
+
+        /// <summary>
+        /// Render from vector data format (original method)
+        /// </summary>
+        private void RenderFromVector()
+        {
             foreach (var geom in _currentShapes)
             {
                 switch (geom)
@@ -456,6 +564,33 @@ namespace MapMaker.Controls
                 }
             }
         }
+
+        /// <summary>
+        /// Update the coordinate transform used by the grid renderer
+        /// </summary>
+        private void UpdateCoordinateTransform()
+        {
+            if (_dataEnvelope == null) return;
+
+            var screenBounds = new Rect(0, 0, MapCanvas.Bounds.Width, MapCanvas.Bounds.Height);
+            _coordinateTransform = new CoordinateTransform(_dataEnvelope, screenBounds, _zoomFactor, _panOffset);
+            _gridRenderer?.UpdateTransform(_coordinateTransform);
+        }
+
+        /// <summary>
+        /// Toggle between grid and vector rendering modes
+        /// </summary>
+        public void ToggleRenderingMode()
+        {
+            _useGridRendering = !_useGridRendering;
+            Console.WriteLine($"Switched to {(_useGridRendering ? "grid" : "vector")} rendering mode");
+            RedrawShapes();
+        }
+
+        /// <summary>
+        /// Get current rendering mode
+        /// </summary>
+        public bool IsUsingGridRendering => _useGridRendering;
 
         private void DrawPolygon(Polygon poly)
         {

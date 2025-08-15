@@ -157,5 +157,29 @@ namespace MapMaker
                 }
             }
         }
+
+        private void OnGridRenderToggled(object? sender, RoutedEventArgs e)
+        {
+            try
+            {
+                MapViewerControl?.ToggleRenderingMode();
+                
+                if (GridRenderToggle?.IsChecked == true)
+                {
+                    GridRenderToggle.Content = "Grid Mode";
+                    StatusText.Text = "Using grid-based rendering (10m units)";
+                }
+                else
+                {
+                    GridRenderToggle.Content = "Vector Mode";
+                    StatusText.Text = "Using vector-based rendering";
+                }
+            }
+            catch (Exception ex)
+            {
+                StatusText.Text = $"Error toggling render mode: {ex.Message}";
+                Console.WriteLine($"Error in OnGridRenderToggled: {ex}");
+            }
+        }
     }
 }

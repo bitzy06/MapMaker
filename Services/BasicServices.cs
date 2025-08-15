@@ -204,6 +204,8 @@ namespace MapMaker.Services
         private readonly double _zoomLevel;
         private readonly AvaloniaPoint _panOffset;
 
+        public double ZoomLevel => _zoomLevel;
+
         public CoordinateTransform(Envelope worldBounds, Rect screenBounds, double zoomLevel, AvaloniaPoint panOffset)
         {
             _worldBounds = worldBounds;

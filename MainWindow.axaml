@@ -37,6 +37,17 @@
                         Background="DarkGreen"
                         Foreground="White"
                         Padding="10,5"/>
+
+                <Separator/>
+
+                <ToggleButton x:Name="GridRenderToggle"
+                            Content="Grid Mode"
+                            IsChecked="True"
+                            Click="OnGridRenderToggled"
+                            Background="DarkBlue"
+                            Foreground="White"
+                            Padding="10,5"
+                            ToolTip.Tip="Toggle between grid-based and vector rendering"/>
                         
                 <TextBlock x:Name="StatusText" 
                           Text="Ready" 
