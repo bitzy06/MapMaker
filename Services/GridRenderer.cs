@@ -73,6 +73,11 @@ namespace MapMaker.Services
         public double MinZoomForCells { get; set; } = 0.1;
 
         /// <summary>
+        /// Minimum screen pixels per cell before switching to block rendering
+        /// </summary>
+        public double MinScreenPixelsPerCell { get; set; } = 2.0;
+
+        /// <summary>
         /// Custom fill brush function based on cell properties
         /// </summary>
         public Func<GridCell, IBrush?>? CellFillFunction { get; set; }
@@ -114,8 +119,15 @@ namespace MapMaker.Services
 
             options ??= new GridRenderOptions();
 
+            // Update grid system resolution based on current zoom level
+            gridLayer.GridSystem.UpdateGridResolution(_currentZoomLevel);
+
+            // Regenerate grid data with new resolution if needed
+            RegenerateGridDataForZoomLevel(gridLayer);
+
             // Check if zoom level is sufficient to show individual cells
-            if (_currentZoomLevel < options.MinZoomForCells)
+            var minScreenCellSize = CalculateMinimumScreenCellSize(gridLayer.GridSystem);
+            if (minScreenCellSize < options.MinScreenPixelsPerCell)
             {
                 RenderGridLayerAsBlocks(gridLayer, canvas, options);
                 return;
@@ -225,6 +237,37 @@ namespace MapMaker.Services
         }
 
         /// <summary>
+        /// Calculate the minimum screen size in pixels for a grid cell at the current zoom level
+        /// </summary>
+        private double CalculateMinimumScreenCellSize(GridSystem gridSystem)
+        {
+            if (_coordinateTransform == null) return 0;
+
+            // Create a sample cell at origin to measure its screen size
+            var cellEnvelope = gridSystem.GetCellEnvelope(new GridCoordinate(0, 0));
+            var topLeft = _coordinateTransform.Transform(new Coordinate(cellEnvelope.MinX, cellEnvelope.MaxY));
+            var bottomRight = _coordinateTransform.Transform(new Coordinate(cellEnvelope.MaxX, cellEnvelope.MinY));
+
+            var width = Math.Abs(bottomRight.X - topLeft.X);
+            var height = Math.Abs(bottomRight.Y - topLeft.Y);
+            
+            return Math.Min(width, height);
+        }
+
+        /// <summary>
+        /// Regenerate grid data with new resolution level if needed
+        /// </summary>
+        private void RegenerateGridDataForZoomLevel(GridLayer gridLayer)
+        {
+            // For now, we'll keep the original grid data from base resolution
+            // In a more sophisticated implementation, we could regenerate the grid
+            // data at different resolutions, but this would require caching the original features
+            
+            // This is a placeholder for future enhancement where we might want to
+            // subdivide or aggregate grid cells based on zoom level
+        }
+
+        /// <summary>
         /// Group cells into larger blocks for efficient rendering
         /// </summary>
         private List<CellBlock> GroupCellsIntoBlocks(IEnumerable<GridCell> cells, int blockSize)
@@ -256,10 +299,10 @@ namespace MapMaker.Services
         private void RenderCellBlock(CellBlock block, GridSystem gridSystem, Canvas canvas, GridRenderOptions options)
         {
             var blockEnvelope = new Envelope(
-                gridSystem.Origin.X + block.Coordinate.X * GridSystem.GRID_SIZE,
-                gridSystem.Origin.X + (block.Coordinate.X + block.Size) * GridSystem.GRID_SIZE,
-                gridSystem.Origin.Y + block.Coordinate.Y * GridSystem.GRID_SIZE,
-                gridSystem.Origin.Y + (block.Coordinate.Y + block.Size) * GridSystem.GRID_SIZE
+                gridSystem.Origin.X + block.Coordinate.X * gridSystem.EffectiveGridSize,
+                gridSystem.Origin.X + (block.Coordinate.X + block.Size) * gridSystem.EffectiveGridSize,
+                gridSystem.Origin.Y + block.Coordinate.Y * gridSystem.EffectiveGridSize,
+                gridSystem.Origin.Y + (block.Coordinate.Y + block.Size) * gridSystem.EffectiveGridSize
             );
 
             var topLeft = _coordinateTransform!.Transform(new Coordinate(blockEnvelope.MinX, blockEnvelope.MaxY));

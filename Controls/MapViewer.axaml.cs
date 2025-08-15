@@ -195,6 +195,26 @@ namespace MapMaker.Controls
             m *= Matrix.CreateTranslation(cx + _panOffset.X, cy + _panOffset.Y);
 
             _shapeCanvas.RenderTransform = new MatrixTransform(m);
+
+            // Update grid system resolution based on zoom level
+            UpdateGridSystemResolution();
+        }
+
+        /// <summary>
+        /// Update grid system resolution based on current zoom level
+        /// </summary>
+        private void UpdateGridSystemResolution()
+        {
+            if (_gridSystem != null)
+            {
+                _gridSystem.UpdateGridResolution(_zoomFactor);
+                
+                // Trigger redraw if using grid rendering to show new resolution
+                if (_useGridRendering)
+                {
+                    RedrawShapes();
+                }
+            }
         }
 
         public void LoadMap(string mapType)
@@ -510,16 +530,17 @@ namespace MapMaker.Controls
                     Fill = new SolidColorBrush(Colors.Green, 0.6),
                     Stroke = new SolidColorBrush(Colors.DarkGreen),
                     StrokeThickness = 0.5,
-                    ShowCellBorders = _zoomFactor > 0.5, // Only show borders when zoomed in
+                    ShowCellBorders = _zoomFactor > 0.3, // Show borders at moderate zoom levels
                     ShowOnlyOccupied = true,
-                    MinZoomForCells = 0.1,
+                    MinZoomForCells = 0.05, // Lower threshold to show more detail
+                    MinScreenPixelsPerCell = 1.0, // Show cells when they're at least 1 pixel
                     UseCoverageAlpha = true
                 };
 
                 _gridRenderer.RenderGridLayer(gridLayer, _shapeCanvas, options);
             }
 
-            Console.WriteLine($"Rendered grid with {_gridLayers.Sum(l => l.GetOccupiedCells().Count())} occupied cells");
+            Console.WriteLine($"Rendered grid with {_gridLayers.Sum(l => l.GetOccupiedCells().Count())} occupied cells at {_gridSystem?.EffectiveGridSize:F1}m resolution");
         }
 
         /// <summary>

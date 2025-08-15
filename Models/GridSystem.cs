@@ -7,19 +7,24 @@ using Avalonia;
 namespace MapMaker.Models
 {
     /// <summary>
-    /// Grid coordinate system with 10-meter unit resolution
+    /// Grid coordinate system with adaptive resolution based on zoom level
     /// </summary>
     public class GridSystem
     {
         /// <summary>
-        /// Grid cell size in world units (10 meters)
+        /// Base grid cell size in world units (10 meters)
         /// </summary>
-        public const double GRID_SIZE = 10.0;
+        public const double BASE_GRID_SIZE = 10.0;
 
         /// <summary>
         /// Origin point of the grid system
         /// </summary>
         public NetTopologySuite.Geometries.Point Origin { get; }
+
+        /// <summary>
+        /// Current effective grid size based on zoom level
+        /// </summary>
+        public double EffectiveGridSize { get; private set; } = BASE_GRID_SIZE;
 
         public GridSystem(NetTopologySuite.Geometries.Point origin)
         {
@@ -27,12 +32,57 @@ namespace MapMaker.Models
         }
 
         /// <summary>
+        /// Update the effective grid size based on zoom level
+        /// </summary>
+        /// <param name="zoomLevel">Current zoom level</param>
+        public void UpdateGridResolution(double zoomLevel)
+        {
+            // Calculate adaptive grid size based on zoom level
+            // Higher zoom = finer grid, lower zoom = coarser grid
+            if (zoomLevel >= 4.0)
+            {
+                // Very high zoom: 1m grid cells
+                EffectiveGridSize = 1.0;
+            }
+            else if (zoomLevel >= 2.0)
+            {
+                // High zoom: 2m grid cells
+                EffectiveGridSize = 2.0;
+            }
+            else if (zoomLevel >= 1.0)
+            {
+                // Normal zoom: 5m grid cells
+                EffectiveGridSize = 5.0;
+            }
+            else if (zoomLevel >= 0.5)
+            {
+                // Medium zoom: base 10m grid cells
+                EffectiveGridSize = BASE_GRID_SIZE;
+            }
+            else if (zoomLevel >= 0.25)
+            {
+                // Low zoom: 20m grid cells
+                EffectiveGridSize = 20.0;
+            }
+            else if (zoomLevel >= 0.1)
+            {
+                // Very low zoom: 50m grid cells
+                EffectiveGridSize = 50.0;
+            }
+            else
+            {
+                // Extremely low zoom: 100m grid cells
+                EffectiveGridSize = 100.0;
+            }
+        }
+
+        /// <summary>
         /// Convert world coordinates to grid coordinates
         /// </summary>
         public GridCoordinate WorldToGrid(Coordinate worldCoord)
         {
-            var x = (int)Math.Floor((worldCoord.X - Origin.X) / GRID_SIZE);
-            var y = (int)Math.Floor((worldCoord.Y - Origin.Y) / GRID_SIZE);
+            var x = (int)Math.Floor((worldCoord.X - Origin.X) / EffectiveGridSize);
+            var y = (int)Math.Floor((worldCoord.Y - Origin.Y) / EffectiveGridSize);
             return new GridCoordinate(x, y);
         }
 
@@ -41,8 +91,8 @@ namespace MapMaker.Models
         /// </summary>
         public Coordinate GridToWorld(GridCoordinate gridCoord)
         {
-            var x = Origin.X + (gridCoord.X + 0.5) * GRID_SIZE;
-            var y = Origin.Y + (gridCoord.Y + 0.5) * GRID_SIZE;
+            var x = Origin.X + (gridCoord.X + 0.5) * EffectiveGridSize;
+            var y = Origin.Y + (gridCoord.Y + 0.5) * EffectiveGridSize;
             return new Coordinate(x, y);
         }
 
@@ -51,9 +101,9 @@ namespace MapMaker.Models
         /// </summary>
         public Envelope GetCellEnvelope(GridCoordinate gridCoord)
         {
-            var x = Origin.X + gridCoord.X * GRID_SIZE;
-            var y = Origin.Y + gridCoord.Y * GRID_SIZE;
-            return new Envelope(x, x + GRID_SIZE, y, y + GRID_SIZE);
+            var x = Origin.X + gridCoord.X * EffectiveGridSize;
+            var y = Origin.Y + gridCoord.Y * EffectiveGridSize;
+            return new Envelope(x, x + EffectiveGridSize, y, y + EffectiveGridSize);
         }
 
         /// <summary>
@@ -61,10 +111,10 @@ namespace MapMaker.Models
         /// </summary>
         public IEnumerable<GridCoordinate> GetGridCells(Envelope envelope)
         {
-            var minGridX = (int)Math.Floor((envelope.MinX - Origin.X) / GRID_SIZE);
-            var maxGridX = (int)Math.Floor((envelope.MaxX - Origin.X) / GRID_SIZE);
-            var minGridY = (int)Math.Floor((envelope.MinY - Origin.Y) / GRID_SIZE);
-            var maxGridY = (int)Math.Floor((envelope.MaxY - Origin.Y) / GRID_SIZE);
+            var minGridX = (int)Math.Floor((envelope.MinX - Origin.X) / EffectiveGridSize);
+            var maxGridX = (int)Math.Floor((envelope.MaxX - Origin.X) / EffectiveGridSize);
+            var minGridY = (int)Math.Floor((envelope.MinY - Origin.Y) / EffectiveGridSize);
+            var maxGridY = (int)Math.Floor((envelope.MaxY - Origin.Y) / EffectiveGridSize);
 
             for (int x = minGridX; x <= maxGridX; x++)
             {
