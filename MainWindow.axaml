@@ -2,8 +2,49 @@
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
-        mc:Ignorable="d" d:DesignWidth="800" d:DesignHeight="450"
+        xmlns:controls="clr-namespace:MapMaker.Controls"
+        mc:Ignorable="d" d:DesignWidth="1024" d:DesignHeight="768"
         x:Class="MapMaker.MainWindow"
-        Title="MapMaker">
-    Welcome to Avalonia!
+        Title="MapMaker - Economy Sim Map Viewer">
+    <Grid>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+        </Grid.RowDefinitions>
+        
+        <!-- Controls Panel -->
+        <Border Grid.Row="0" Background="LightGray" Padding="10">
+            <StackPanel Orientation="Horizontal" Spacing="15">
+                <TextBlock Text="Map Type:" VerticalAlignment="Center" FontWeight="Bold"/>
+                
+                <RadioButton x:Name="CountryRadio" 
+                           Content="Country" 
+                           GroupName="MapType"
+                           IsChecked="True"
+                           Click="OnMapTypeChanged"/>
+                           
+                <RadioButton x:Name="StateRadio" 
+                           Content="State" 
+                           GroupName="MapType"
+                           Click="OnMapTypeChanged"/>
+                
+                <Separator/>
+                
+                <Button x:Name="OutputButton" 
+                        Content="Export to Output" 
+                        Click="OnOutputClicked"
+                        Background="DarkGreen"
+                        Foreground="White"
+                        Padding="10,5"/>
+                        
+                <TextBlock x:Name="StatusText" 
+                          Text="Ready" 
+                          VerticalAlignment="Center" 
+                          FontStyle="Italic"/>
+            </StackPanel>
+        </Border>
+        
+        <!-- Map Viewer -->
+        <controls:MapViewer x:Name="MapViewerControl" Grid.Row="1"/>
+    </Grid>
 </Window>
