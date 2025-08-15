@@ -178,7 +178,7 @@ namespace MapMaker.Controls
                 // Store the shape count for display purposes
                 _shapeCount = geometryCount;
             }
-            catch (Exception ex)
+            catch (Exception)
             {
                 // Log error but don't fail completely
                 _shapeCount = -1;
@@ -189,8 +189,6 @@ namespace MapMaker.Controls
 
         private void ShowShapeFileInfo()
         {
-            var totalShapes = 0;
-            // Add up shapes from all files
             var infoText = $"Loaded map data from {_currentMapType} directory.\n" +
                           "Pan: Click and drag\nZoom: Mouse wheel\n" +
                           "Use toggles above to switch between country/state data.";

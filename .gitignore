@@ -361,3 +361,24 @@ MigrationBackup/
 
 # Fody - auto-generated XML schema
 FodyWeavers.xsd
+
+# MapMaker specific ignores
+# Ignore shapefile data but keep README files
+country/*.shp
+country/*.shx
+country/*.dbf
+country/*.prj
+country/*.cpg
+state/*.shp
+state/*.shx
+state/*.dbf
+state/*.prj
+state/*.cpg
+output/*.shp
+output/*.shx
+output/*.dbf
+output/*.prj
+output/*.cpg
+!country/README.txt
+!state/README.txt
+!output/README.txt

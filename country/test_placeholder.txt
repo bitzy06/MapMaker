@@ -1,0 +1,9 @@
+This is a placeholder for a test shapefile.
+
+In a real deployment, you would place actual .shp files here such as:
+- countries.shp
+- countries.dbf
+- countries.shx
+- countries.prj
+
+These files would contain the country boundaries from the cshapes dataset used in Economy Sim.
