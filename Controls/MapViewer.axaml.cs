@@ -8,6 +8,7 @@ using Avalonia.Input;
 using Avalonia.Media;
 using NetTopologySuite.Geometries;
 using NetTopologySuite.IO;
+using MapMaker.Tools;
 using AvaloniaPoint = Avalonia.Point;
 using FilePath = System.IO.Path;
 using NTSGeometry = NetTopologySuite.Geometries.Geometry;
@@ -32,6 +33,9 @@ namespace MapMaker.Controls
         private AvaloniaPoint _fitOffset = new AvaloniaPoint(0, 0); // world->screen translation to fit
         private int _shapeCount = 0; // total number of geometries loaded
 
+        // Tool system integration
+        private MainWindow? _toolManager;
+
         public MapViewer()
         {
             InitializeComponent();
@@ -50,16 +54,32 @@ namespace MapMaker.Controls
             };
         }
 
+        public void SetToolManager(MainWindow toolManager)
+        {
+            _toolManager = toolManager;
+        }
+
         private void SetupEventHandlers()
         {
             PointerPressed += OnPointerPressed;
             PointerMoved += OnPointerMoved;
             PointerReleased += OnPointerReleased;
             PointerWheelChanged += OnPointerWheelChanged;
+            KeyDown += OnKeyDown;
+            KeyUp += OnKeyUp;
         }
 
         private void OnPointerPressed(object? sender, PointerPressedEventArgs e)
         {
+            // Try to delegate to active tool first
+            var activeTool = _toolManager?.GetActiveTool();
+            if (activeTool != null && activeTool.Name != "Navigate")
+            {
+                activeTool.OnMouseDown(e);
+                if (e.Handled) return;
+            }
+
+            // Fall back to default navigation behavior
             if (e.GetCurrentPoint(this).Properties.IsLeftButtonPressed)
             {
                 _isDragging = true;
@@ -71,6 +91,15 @@ namespace MapMaker.Controls
 
         private void OnPointerMoved(object? sender, PointerEventArgs e)
         {
+            // Try to delegate to active tool first
+            var activeTool = _toolManager?.GetActiveTool();
+            if (activeTool != null && activeTool.Name != "Navigate")
+            {
+                activeTool.OnMouseMove(e);
+                if (e.Handled) return;
+            }
+
+            // Fall back to default navigation behavior
             if (_isDragging)
             {
                 var currentPosition = e.GetCurrentPoint(this).Position;
@@ -86,9 +115,32 @@ namespace MapMaker.Controls
 
         private void OnPointerReleased(object? sender, PointerReleasedEventArgs e)
         {
+            // Try to delegate to active tool first
+            var activeTool = _toolManager?.GetActiveTool();
+            if (activeTool != null && activeTool.Name != "Navigate")
+            {
+                activeTool.OnMouseUp(e);
+                if (e.Handled) return;
+            }
+
+            // Fall back to default navigation behavior
             _isDragging = false;
             this.Cursor = new Cursor(StandardCursorType.Arrow);
             e.Handled = true;
+        }
+
+        private void OnKeyDown(object? sender, KeyEventArgs e)
+        {
+            // Delegate to active tool
+            var activeTool = _toolManager?.GetActiveTool();
+            activeTool?.OnKeyDown(e);
+        }
+
+        private void OnKeyUp(object? sender, KeyEventArgs e)
+        {
+            // Delegate to active tool
+            var activeTool = _toolManager?.GetActiveTool();
+            activeTool?.OnKeyUp(e);
         }
 
         private void OnPointerWheelChanged(object? sender, PointerWheelEventArgs e)

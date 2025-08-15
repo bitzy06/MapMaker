@@ -1,14 +1,27 @@
 using System;
+using System.Collections.Generic;
 using System.IO;
 using System.Threading.Tasks;
 using Avalonia.Controls;
+using Avalonia.Controls.Primitives;
 using Avalonia.Interactivity;
 using NetTopologySuite.IO;
+using MapMaker.Tools;
 
 namespace MapMaker
 {
     public partial class MainWindow : Window
     {
+        private readonly Dictionary<string, ITool> _tools = new();
+        private ITool? _activeTool;
+        private readonly List<ToggleButton> _toolButtons = new();
+        
+        // UI elements
+        private ToggleButton? _navigateToolButton;
+        private ToggleButton? _selectToolButton;
+        private ToggleButton? _moveToolButton;
+        private TextBlock? _toolStatusText;
+
         public MainWindow()
         {
             InitializeComponent();
@@ -17,9 +30,36 @@ namespace MapMaker
 
         private void OnWindowLoaded(object? sender, RoutedEventArgs e)
         {
+            // Get UI elements
+            _navigateToolButton = this.FindControl<ToggleButton>("NavigateToolButton");
+            _selectToolButton = this.FindControl<ToggleButton>("SelectToolButton");
+            _moveToolButton = this.FindControl<ToggleButton>("MoveToolButton");
+            _toolStatusText = this.FindControl<TextBlock>("ToolStatusText");
+            
+            InitializeTools();
+            
             // Load the default map (country)
             MapViewerControl.LoadMap("country");
             StatusText.Text = "Country map loaded";
+
+            // Connect the map viewer to the tool system
+            MapViewerControl.SetToolManager(this);
+        }
+
+        private void InitializeTools()
+        {
+            // Create tool instances
+            _tools["Navigate"] = new NavigateTool();
+            _tools["Select"] = new SelectTool();
+            _tools["Move"] = new MoveTool();
+
+            // Store tool buttons for easier management
+            if (_navigateToolButton != null) _toolButtons.Add(_navigateToolButton);
+            if (_selectToolButton != null) _toolButtons.Add(_selectToolButton);
+            if (_moveToolButton != null) _toolButtons.Add(_moveToolButton);
+
+            // Set default tool
+            SetActiveTool("Navigate");
         }
 
         private void OnMapTypeChanged(object? sender, RoutedEventArgs e)
@@ -33,6 +73,45 @@ namespace MapMaker
                     StatusText.Text = $"{char.ToUpper(mapType[0])}{mapType.Substring(1)} map loaded";
                 }
             }
+        }
+
+        private void OnToolSelected(object? sender, RoutedEventArgs e)
+        {
+            if (sender is ToggleButton button && button.Tag is string toolName)
+            {
+                // Uncheck all other tool buttons
+                foreach (var toolButton in _toolButtons)
+                {
+                    if (toolButton != button)
+                        toolButton.IsChecked = false;
+                }
+
+                // Ensure the clicked button stays checked
+                button.IsChecked = true;
+
+                SetActiveTool(toolName);
+            }
+        }
+
+        private void SetActiveTool(string toolName)
+        {
+            // Deactivate current tool
+            _activeTool?.Deactivate();
+
+            // Activate new tool
+            if (_tools.TryGetValue(toolName, out var tool))
+            {
+                _activeTool = tool;
+                // Note: We'll create a proper ToolContext when we have the services set up
+                // For now, we'll handle this in the MapViewer
+                if (_toolStatusText != null)
+                    _toolStatusText.Text = tool.GetStatusText();
+            }
+        }
+
+        public ITool? GetActiveTool()
+        {
+            return _activeTool;
         }
 
         private async void OnOutputClicked(object? sender, RoutedEventArgs e)
