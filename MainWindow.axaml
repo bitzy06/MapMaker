@@ -2,8 +2,104 @@
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
-        mc:Ignorable="d" d:DesignWidth="800" d:DesignHeight="450"
+        xmlns:controls="clr-namespace:MapMaker.Controls"
+        mc:Ignorable="d" d:DesignWidth="1024" d:DesignHeight="768"
         x:Class="MapMaker.MainWindow"
-        Title="MapMaker">
-    Welcome to Avalonia!
+        Title="MapMaker - Economy Sim Map Viewer">
+    <Grid>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+        </Grid.RowDefinitions>
+        
+        <!-- Controls Panel -->
+        <Border Grid.Row="0" Background="LightGray" Padding="10">
+            <StackPanel Orientation="Horizontal" Spacing="15">
+                <TextBlock Text="Map Type:" VerticalAlignment="Center" FontWeight="Bold"/>
+                
+                <RadioButton x:Name="CountryRadio" 
+                           Content="Country" 
+                           GroupName="MapType"
+                           IsChecked="True"
+                           Click="OnMapTypeChanged"/>
+                           
+                <RadioButton x:Name="StateRadio" 
+                           Content="State" 
+                           GroupName="MapType"
+                           Click="OnMapTypeChanged"/>
+                
+                <Separator/>
+                
+                <Button x:Name="OutputButton" 
+                        Content="Export to Output" 
+                        Click="OnOutputClicked"
+                        Background="DarkGreen"
+                        Foreground="White"
+                        Padding="10,5"/>
+
+                <Separator/>
+
+                <ToggleButton x:Name="GridRenderToggle"
+                            Content="Grid Mode"
+                            IsChecked="True"
+                            Click="OnGridRenderToggled"
+                            Background="DarkBlue"
+                            Foreground="White"
+                            Padding="10,5"
+                            ToolTip.Tip="Toggle between grid-based and vector rendering"/>
+                        
+                <TextBlock x:Name="StatusText" 
+                          Text="Ready" 
+                          VerticalAlignment="Center" 
+                          FontStyle="Italic"/>
+            </StackPanel>
+        </Border>
+        
+        <!-- Toolbar -->
+        <Border Grid.Row="1" Background="DarkGray" Padding="5">
+            <StackPanel Orientation="Horizontal" Spacing="5">
+                <TextBlock Text="Tools:" VerticalAlignment="Center" FontWeight="Bold" Foreground="White" Margin="5,0"/>
+                
+                <ToggleButton x:Name="NavigateToolButton"
+                            Content="?? Navigate"
+                            IsChecked="True"
+                            Click="OnToolSelected"
+                            Tag="Navigate"
+                            Background="DarkSlateBlue"
+                            Foreground="White"
+                            Padding="8,4"
+                            ToolTip.Tip="Navigate tool - Pan and zoom the map"/>
+                            
+                <ToggleButton x:Name="SelectToolButton"
+                            Content="?? Select"
+                            Click="OnToolSelected"
+                            Tag="Select"
+                            Background="DarkSlateBlue"
+                            Foreground="White"
+                            Padding="8,4"
+                            ToolTip.Tip="Select tool - Select features and vertices"/>
+                            
+                <ToggleButton x:Name="MoveToolButton"
+                            Content="?? Move"
+                            Click="OnToolSelected"
+                            Tag="Move"
+                            Background="DarkSlateBlue"
+                            Foreground="White"
+                            Padding="8,4"
+                            ToolTip.Tip="Move tool - Move selected features and vertices"/>
+                
+                <Separator/>
+                
+                <TextBlock x:Name="ToolStatusText" 
+                          Text="Navigate tool active" 
+                          VerticalAlignment="Center" 
+                          FontStyle="Italic"
+                          Foreground="LightGray"/>
+            </StackPanel>
+        </Border>
+        
+        <!-- Map Viewer -->
+        <controls:MapViewer x:Name="MapViewerControl" Grid.Row="2"/>
+    </Grid>
 </Window>
